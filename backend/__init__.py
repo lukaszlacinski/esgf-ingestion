@@ -4,7 +4,7 @@ from celery import Celery
 
 
 celery_app = Celery('tasks', backend='db+postgres://ingestion:<password>@localhost/esgf_ingestion_celery',
-        broker='sqla+postgres://ingestion:<password>@localhost/esgf_ingestion_celery',
+        broker='amqp://guest:guest@localhost:5672//',
         )
 
 celery_app.conf.update(
@@ -96,7 +96,9 @@ def create_esgini(path, submission_id, facets, dataset_root=None):
 def scan(openid, submission_id, facets, path=None, x509=None, username=None):
 
     # Move all files to tmp/, create a facet directory sequence, move all files from tmp/ to the directory sequence.
-    if not path:
+    if path:
+        path = os.path.join(submission_path, path.lstrip('/'))
+    else:
         path = os.path.join(submission_path, 'submission_%s' % submission_id)
     tmpdir = os.path.join(path, 'tmp')
     try:
@@ -188,7 +190,9 @@ def publish(openid, datanode, submission_id, x509=None, username=None, path=None
     os.environ['X509_USER_PROXY'] = user_cred_path
     mappath = os.path.join(tmp_config_path, '%s_map.txt' % submission_id)
 
-    if not path:
+    if path:
+        path = os.path.join(submission_path, path.lstrip('/'))
+    else:
         path = os.path.join(submission_path, 'submission_%s' % submission_id)
 
     # Link data_ingestion/ to ingestion/submission_<submission_id>/
