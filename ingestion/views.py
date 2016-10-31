@@ -6,6 +6,7 @@ from myproxy.client import MyProxyClient
 from OpenSSL import crypto
 from pyasn1.type import useful
 from datetime import datetime
+import logging
 
 from pyramid.httpexceptions import (
     HTTPFound,
@@ -49,6 +50,9 @@ from backend import (
     )
 
 
+log = logging.getLogger(__name__)
+
+
 @view_config(route_name='home', renderer='json', permission='view')
 def home(request):
     return Response('ESGF Ingestion REST API\n')
@@ -67,7 +71,7 @@ def authenticate(request):
     (server, username) = utils.decompose_openid(openid)
 
     # Get X.509 certificate chain from MyProxy server
-    print "Getting X.509 certificate from %s for %s" % (server, username)
+    log.info("Getting X.509 certificate from %s for %s" % (server, username))
     myproxy_client = MyProxyClient(hostname=server)
     cred_chain_pem_tuple = None
     try:
@@ -90,7 +94,6 @@ def authenticate(request):
     # Check the publisher role in X509v3 extension 1.2.3.4.4.3.2.1.7.8
     if not authentication.is_publisher(openid, cert):
         request.response.status = 400
-        print 'DUPA!!!!'
         return {'status': 'Error', 'message': 'The user does not have the publisher role'}
 
 
@@ -124,8 +127,8 @@ def workflow_create(request):
     publisher = DBSession.query(Publisher).filter(Publisher.openid==openid).first()
     data = json.loads(request.body.decode('utf-8'))
 
-    print('openid: %s' % openid)
-    print('data: %s' % data)
+    log.info('openid: %s' % openid)
+    log.info('data: %s' % data)
 
     submission = Submission()
 
@@ -199,7 +202,7 @@ def workflow_transfer(request):
 
     ar = transfer.delay(openid=openid, datanode=metadata.value, submission_id='%s' % submission.id)
     submission.task_id = ar.id
-    submission.task_name = ar.task_name
+    submission.task_name = 'transfer'
     if path:
         submission.path = path
 
@@ -240,11 +243,11 @@ def workflow_scan(request):
     fnv = []
     for fname, fvalue, sfacet in facets:
         fnv.append({ 'name': fname.name, 'value': fvalue.value })
-        print('%d: %s:%s' % (submission.id, fname.name, fvalue.value))
+        log.info('%d: %s:%s' % (submission.id, fname.name, fvalue.value))
 
     ar = scan.delay(openid=openid, submission_id='%s' % submission.id, facets=fnv, path=path)
     submission.task_id = ar.id
-    submission.task_name = ar.task_name
+    submission.task_name = 'scan'
     if path:
         submission.path = path
 
@@ -274,7 +277,7 @@ def workflow_publish(request):
 
     ar = publish.delay(openid=openid, datanode=metadata.value, submission_id='%s' % submission.id, path=submission.path)
     submission.task_id = ar.id
-    submission.task_name = ar.task_name
+    submission.task_name = 'publish'
 
     return {'status': 'Success', 'message': 'Publish task %s started successfully' % ar.id }
 

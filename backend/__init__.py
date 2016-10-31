@@ -36,7 +36,7 @@ from globusonline.transfer.api_client import Transfer, TransferAPIClient
 
 
 dataroot_path = '/esg/data_ingestion'
-submission_path = '/esg/gridftp_root/ingestion'
+submission_path = '/esg/gridftp_root/ingestion/shared'
 tmp_config_path = '/esg/tmp/ingestion'
 
 @celery_app.task

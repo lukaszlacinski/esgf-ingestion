@@ -20,7 +20,7 @@ requires = [
     'waitress',
     'pyramid_celery',
     'celery',
-    'pyOpenSSL',
+    'pyasn1',
     'MyProxyClient',
     'globusonline-transfer-api-client',
     ]
